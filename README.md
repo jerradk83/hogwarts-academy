@@ -13,6 +13,7 @@ A dedicated cooldown timer widget built specifically for the **Hogwarts Academy*
    - **WORK:** `30 minutes`
    - **PET TREAT:** `2 hours`
    - **CAREER WORK:** `2 hours`
+   - **HARVEST MANDRAKE:** `2 hours`
 
 2. **Streamlined 1-Click "Copy & Open" Action:**
    - Each timer card and the completion popup include a **⚡ Copy & Open** button.
