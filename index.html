@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hogwarts Academy - Time-Turner & Spell Cooldowns</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800;900&family=Cinzel+Decorative:wght@700&family=MedievalSharp&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Hogwarts Castle & Magical Palette */
+      --bg-dark: #0a0807;
+      --bg-stone: #110d0b;
+      --parchment-dark: #191410;
+      --parchment-card: #1f1813;
+      --parchment-hover: #292019;
+      --parchment-light: #f4ebd9;
+      --parchment-muted: #c2b49a;
+      
+      /* Antique Gold & Flame Glow */
+      --gold-primary: #d4af37;
+      --gold-light: #f9e295;
+      --gold-bright: #ffea79;
+      --gold-dark: #8c6f1a;
+      --gold-burnished: #b8932b;
+      --gold-border: rgba(212, 175, 55, 0.45);
+      --gold-glow: rgba(249, 226, 149, 0.35);
+      
+      /* House Accents */
+      --gryffindor-red: #740001;
+      --gryffindor-gold: #eeba30;
+      --slytherin-green: #1a472a;
+      --slytherin-silver: #aaaaaa;
+      --ravenclaw-blue: #0e1a40;
+      --ravenclaw-bronze: #946b2d;
+      --hufflepuff-yellow: #ecb939;
+      
+      /* UI Elements */
+      --discord: #5865F2;
+      --discord-hover: #4752c4;
+      --success-green: #2ecc71;
+      --danger-ruby: #c0392b;
+      
+      /* Typography */
+      --font-display: 'Cinzel Decorative', 'Cinzel', 'Palatino Linotype', Georgia, serif;
+      --font-heading: 'Cinzel', 'Times New Roman', Georgia, serif;
+      --font-body: 'Crimson Pro', Georgia, serif;
+      --font-mono: 'MedievalSharp', ui-monospace, Menlo, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(ellipse at 50% -10%, rgba(212, 175, 55, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 10% 30%, rgba(116, 0, 1, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 90% 70%, rgba(26, 71, 42, 0.12) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 110%, rgba(14, 26, 64, 0.18) 0%, transparent 60%),
+        linear-gradient(rgba(10, 8, 7, 0.88), rgba(10, 8, 7, 0.94));
+      color: var(--parchment-light);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 56px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Floating Sparkles Canvas */
+    #magicalCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.75;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* House Crest Banner Ribbon */
+    .houses-ribbon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: -10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .house-seal {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-family: var(--font-heading);
+      font-weight: 900;
+      border: 1px solid var(--gold-border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 10px rgba(212, 175, 55, 0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .house-seal:hover {
+      transform: translateY(-2px) scale(1.1);
+    }
+
+    .house-g { background: linear-gradient(135deg, var(--gryffindor-red), #3d0000); color: var(--gryffindor-gold); }
+    .house-s { background: linear-gradient(135deg, var(--slytherin-green), #0d2516); color: var(--slytherin-silver); }
+    .house-r { background: linear-gradient(135deg, var(--ravenclaw-blue), #070e24); color: var(--ravenclaw-bronze); }
+    .house-h { background: linear-gradient(135deg, #c49622, #372e29); color: #fff8d6; }
+
+    /* Hogwarts Header */
+    header {
+      background: linear-gradient(180deg, rgba(28, 22, 17, 0.95), rgba(19, 14, 11, 0.98));
+      border: 2px solid var(--gold-burnished);
+      border-radius: 18px;
+      padding: 28px 30px 22px;
+      margin-bottom: 24px;
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.7),
+        inset 0 0 30px rgba(0, 0, 0, 0.8),
+        0 0 24px rgba(212, 175, 55, 0.15);
+      position: relative;
+      text-align: center;
+    }
+
+    /* Ornate corner filigrees */
+    header::before, header::after {
+      content: "✦";
+      position: absolute;
+      color: var(--gold-light);
+      font-size: 16px;
+      filter: drop-shadow(0 0 6px var(--gold-glow));
+    }
+    header::before { top: 8px; left: 12px; }
+    header::after { top: 8px; right: 12px; }
+
+    .header-crest {
+      font-size: 40px;
+      line-height: 1;
+      margin-bottom: 8px;
+      display: inline-block;
+      filter: drop-shadow(0 0 14px var(--gold-glow));
+      animation: floatWand 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatWand {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-4px) rotate(3deg); }
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      text-shadow: 0 0 16px rgba(249, 226, 149, 0.45), 2px 2px 4px rgba(0, 0, 0, 0.8);
+      margin-bottom: 4px;
+    }
+
+    .motto {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      letter-spacing: 2.5px;
+      color: var(--gold-burnished);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--parchment-muted);
+      font-style: italic;
+      max-width: 600px;
+      margin: 0 auto 16px;
+      line-height: 1.4;
+    }
+
+    .controls-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 14px;
+      border-top: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    /* Magical Pill Buttons */
+    .pill-btn {
+      background: rgba(31, 24, 19, 0.9);
+      border: 1px solid var(--gold-burnished);
+      color: var(--parchment-light);
+      font-family: var(--font-heading);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      user-select: none;
+    }
+
+    .pill-btn:hover {
+      background: rgba(212, 175, 55, 0.18);
+      border-color: var(--gold-light);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+      color: #fff;
+    }
+
+    .pill-btn.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.28), rgba(140, 111, 26, 0.35));
+      border-color: var(--gold-light);
+      color: var(--gold-bright);
+      box-shadow: 0 0 14px rgba(249, 226, 149, 0.3);
+    }
+
+    /* Grimoire / Scroll Timer Cards */
+    .timer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .timer-card {
+      background: linear-gradient(135deg, rgba(25, 19, 14, 0.95), rgba(17, 13, 10, 0.98));
+      border: 1.5px solid var(--gold-burnished);
+      border-radius: 14px;
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 18px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .timer-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 10% 50%, rgba(212, 175, 55, 0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .timer-card:hover {
+      border-color: var(--gold-light);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 20px rgba(212, 175, 55, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .timer-card.running {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 22px rgba(249, 226, 149, 0.25), inset 0 0 15px rgba(212, 175, 55, 0.1);
+    }
+
+    .timer-card.ready-state {
+      border-color: var(--success-green);
+      box-shadow: 0 0 24px rgba(46, 204, 113, 0.28);
+    }
+
+    /* Golden Progress Bar */
+    .progress-bar-bg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: rgba(0, 0, 0, 0.6);
+      width: 100%;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold-primary), var(--gold-bright));
+      width: 0%;
+      box-shadow: 0 0 10px rgba(249, 226, 149, 0.6);
+      transition: width 0.3s linear;
+    }
+
+    .timer-card.ready-state .progress-bar-fill {
+      background: var(--success-green);
+      box-shadow: 0 0 10px rgba(46, 204, 113, 0.7);
+      width: 100% !important;
+    }
+
+    /* Card Left Details */
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .task-icon-orb {
+      font-size: 28px;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 35% 35%, #2a2018, #110d0a);
+      border: 1.5px solid var(--gold-burnished);
+      border-radius: 12px;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
+      filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.2));
+    }
+
+    .task-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-name {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--gold-light);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .badge-duration {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(212, 175, 55, 0.15);
+      color: var(--gold-bright);
+      border: 1px solid var(--gold-burnished);
+      letter-spacing: 0.5px;
+    }
+
+    .badge-status {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .badge-status.idle {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--parchment-muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .badge-status.running {
+      background: rgba(212, 175, 55, 0.22);
+      color: var(--gold-bright);
+      border: 1px solid var(--gold-primary);
+      animation: candleFlicker 2s infinite ease-in-out;
+    }
+
+    .badge-status.ready {
+      background: rgba(46, 204, 113, 0.2);
+      color: #2ecc71;
+      border: 1px solid #2ecc71;
+    }
+
+    @keyframes candleFlicker {
+      0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 4px var(--gold-glow)); }
+      50% { opacity: 1; filter: drop-shadow(0 0 10px var(--gold-glow)); }
+    }
+
+    .command-preview {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--parchment-muted);
+      background: rgba(10, 8, 6, 0.7);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Actions Right Column */
+    .task-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .timer-display {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gold-light);
+      min-width: 95px;
+      text-align: right;
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 10px rgba(249, 226, 149, 0.4);
+    }
+
+    .timer-display.ready {
+      color: var(--success-green);
+      text-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      user-select: none;
+      line-height: 1;
+      text-decoration: none;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Golden Time-Turner Start Button */
+    .btn-start {
+      background: linear-gradient(135deg, #d4af37, #997819);
+      color: #120e09;
+      font-weight: 800;
+      border: 1px solid var(--gold-light);
+      box-shadow: 0 2px 10px rgba(212, 175, 55, 0.35);
+    }
+
+    .btn-start:hover {
+      background: linear-gradient(135deg, #f9e295, #c5a059);
+      box-shadow: 0 0 16px rgba(249, 226, 149, 0.6);
+      color: #000;
+    }
+
+    .btn-pause {
+      background: rgba(45, 35, 27, 0.9);
+      color: var(--parchment-light);
+      border: 1px solid var(--gold-border);
+    }
+
+    .btn-pause:hover {
+      background: rgba(65, 50, 38, 0.9);
+      border-color: var(--gold-light);
+    }
+
+    .btn-reset {
+      background: transparent;
+      color: var(--parchment-muted);
+      padding: 8px 9px;
+      border: 1px solid transparent;
+    }
+
+    .btn-reset:hover {
+      color: #e74c3c;
+      background: rgba(231, 76, 60, 0.15);
+      border-color: rgba(231, 76, 60, 0.3);
+    }
+
+    /* 1-Click Streamlined Copy & Open */
+    .btn-quick {
+      background: linear-gradient(135deg, #5865F2, #3c45a5);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 2px 10px rgba(88, 101, 242, 0.45);
+      font-weight: 800;
+    }
+
+    .btn-quick:hover {
+      background: linear-gradient(135deg, #6c79f7, #4e59c7);
+      box-shadow: 0 0 16px rgba(88, 101, 242, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .btn-copy {
+      background: #231b15;
+      color: var(--parchment-light);
+      border: 1px solid var(--gold-border);
+    }
+
+    .btn-copy:hover {
+      background: #362920;
+      border-color: var(--gold-light);
+    }
+
+    .btn-copy.copied {
+      background: rgba(46, 204, 113, 0.2);
+      border-color: #2ecc71;
+      color: #2ecc71;
+    }
+
+    .btn-discord {
+      background: rgba(88, 101, 242, 0.2);
+      color: #8ea1ff;
+      border: 1px solid rgba(88, 101, 242, 0.5);
+    }
+
+    .btn-discord:hover {
+      background: var(--discord);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(88, 101, 242, 0.55);
+    }
+
+    /* Modal - Official Hogwarts Parchment Letter */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 4, 3, 0.88);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: 
+        radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.15) 0%, transparent 70%),
+        linear-gradient(180deg, #241b14, #18120d);
+      border: 2px solid var(--gold-light);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 500px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 40px var(--gold-glow);
+      text-align: center;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    /* Wax seal stamp */
+    .wax-seal {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #b31b1b, #610b0b);
+      border: 2px solid #df9a9a;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), 0 0 14px rgba(179, 27, 27, 0.6);
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffe0e0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      color: var(--gold-light);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 12px rgba(249, 226, 149, 0.4);
+    }
+
+    .modal-sub {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--gold-burnished);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .modal-desc {
+      font-size: 16px;
+      color: var(--parchment-light);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .modal-command-box {
+      background: rgba(10, 8, 6, 0.85);
+      border: 1px solid var(--gold-burnished);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--gold-bright);
+      margin-bottom: 20px;
+      word-break: break-all;
+      user-select: all;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-actions-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-close-modal {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: transparent;
+      border: none;
+      color: var(--parchment-muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: sans-serif;
+    }
+
+    .btn-close-modal:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Floating Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9998;
+    }
+
+    .toast {
+      background: linear-gradient(135deg, #261c14, #17110c);
+      border: 1.5px solid var(--gold-burnished);
+      border-radius: 10px;
+      padding: 12px 18px;
+      color: var(--parchment-light);
+      font-family: var(--font-body);
+      font-size: 15px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.8), 0 0 14px var(--gold-glow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Footer */
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--parchment-muted);
+      line-height: 1.7;
+      border-top: 1px solid rgba(212, 175, 55, 0.18);
+      padding-top: 20px;
+    }
+
+    .marauder-quote {
+      font-family: var(--font-display);
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      color: var(--gold-burnished);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    /* Responsive */
+    @media (max-width: 760px) {
+      .timer-card {
+        grid-template-columns: 1fr;
+      }
+      .task-actions {
+        justify-content: space-between;
+        width: 100%;
+        border-top: 1px solid rgba(212, 175, 55, 0.15);
+        padding-top: 14px;
+      }
+      .timer-display {
+        text-align: left;
+      }
+      .modal-actions-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Ambient Magic Canvas -->
+  <canvas id="magicalCanvas"></canvas>
+
+  <div class="container">
+    <!-- Hogwarts Four Houses Ribbon -->
+    <div class="houses-ribbon">
+      <div class="house-seal house-g" title="Gryffindor">G</div>
+      <div class="house-seal house-s" title="Slytherin">S</div>
+      <div class="house-seal house-r" title="Ravenclaw">R</div>
+      <div class="house-seal house-h" title="Hufflepuff">H</div>
+    </div>
+
+    <!-- Main Hogwarts Academy Header -->
+    <header>
+      <div class="header-crest">⚡</div>
+      <h1>Hogwarts Academy</h1>
+      <div class="motto">Time-Turner & Cooldown Spellbook</div>
+      <p class="subtitle">"An enchanted companion for Hogwarts students to time potion cauldrons, chamber expeditions, and career tasks with precision."</p>
+
+      <div class="controls-top">
+        <button id="btnNotifToggle" class="pill-btn" onclick="requestNotificationPermission()">
+          <span>🔔</span> <span id="notifStatusText">Owl Post Alerts</span>
+        </button>
+        <button id="btnSoundToggle" class="pill-btn active" onclick="toggleSound()">
+          <span id="soundIcon">🔊</span> <span id="soundText">Chime: On</span>
+        </button>
+        <button class="pill-btn" onclick="testAlertSound()" title="Cast chime flourish">
+          <span>✨</span> Test Chime
+        </button>
+        <a href="mobile.html" class="pill-btn" style="text-decoration:none;" title="Switch to Mobile / iPhone Layout">
+          <span>📱</span> Mobile View
+        </a>
+      </div>
+    </header>
+
+    <!-- Timer List -->
+    <main class="timer-list" id="timerList"></main>
+
+    <!-- Footer Information -->
+    <footer>
+      <div class="marauder-quote">"I solemnly swear that I am up to no good"</div>
+      <div>⚡ <strong>1-Click Action:</strong> Click <strong>⚡ Copy & Open</strong> to copy the incantation and fly directly to the Discord channel. Hit <kbd>Ctrl+V</kbd> and <kbd>Enter</kbd>.</div>
+      <div>⏳ <strong>Manual Control:</strong> When a timer ends, an alarm chimes and the Time-Turner resets to full duration. You start it manually when ready!</div>
+    </footer>
+  </div>
+
+  <!-- Screen Alert Modal (Owl Post Letter) -->
+  <div class="modal-backdrop" id="alertModal" onclick="handleBackdropClick(event)">
+    <div class="modal-box">
+      <button class="btn-close-modal" onclick="closeModal()">✕</button>
+      <div class="wax-seal">H</div>
+      <h2 class="modal-title" id="modalTitle">Cooldown Ready!</h2>
+      <div class="modal-sub">By Order of Hogwarts Academy</div>
+      <p class="modal-desc" id="modalDesc">Your cooldown has completed. The Time-Turner is <strong>reset</strong> and waiting for your command.</p>
+      
+      <div class="modal-command-box" id="modalCommand">/brew recipe:Healing Potion</div>
+
+      <div class="modal-actions">
+        <!-- 1-Click Streamlined Action -->
+        <button class="btn btn-quick" id="modalBtnQuick" onclick="modalCopyAndOpenAction()" style="padding: 12px 18px; font-size: 14px; justify-content: center;">
+          <span>⚡</span> Copy Incantation & Open Discord
+        </button>
+
+        <div style="font-size: 13px; color: var(--parchment-muted); margin: 2px 0 6px;">
+          💡 Opens Discord client with command copied. Tap <strong style="color:var(--parchment-light)">Ctrl+V</strong> & <strong style="color:var(--parchment-light)">Enter</strong> in chat. The timer remains ready for you to start manually!
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn btn-copy" id="modalBtnCopy" onclick="modalCopyAction()">
+            <span>📋</span> Copy Only
+          </button>
+          <a class="btn btn-discord" id="modalBtnDiscord" href="#" target="_blank" onclick="closeModal()">
+            <svg width="16" height="12" viewBox="0 0 127.14 96.36" fill="currentColor">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z"/>
+            </svg>
+            Discord Only
+          </a>
+        </div>
+
+        <button class="btn btn-start" id="modalBtnRestart" onclick="modalStartAgainAction()" style="justify-content: center;">
+          <span>▶️</span> Start Time-Turner Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // Configuration for Hogwarts Academy Tasks
+    const SERVER_ID = "1566057824159793233";
+
+    const TASKS_DATA = [
+      {
+        id: "healing_potion",
+        name: "BREW HEALING POTION",
+        icon: "🧪",
+        durationSec: 90, // 1 min 30 sec
+        command: "/brew recipe:Healing Potion",
+        channelId: "1566456143851692143"
+      },
+      {
+        id: "focus_potion",
+        name: "BREW FOCUS POTION",
+        icon: "✨",
+        durationSec: 90, // 1 min 30 sec
+        command: "/brew recipe:Focus Potion",
+        channelId: "1566456143851692143"
+      },
+      {
+        id: "explore",
+        name: "EXPLORE",
+        icon: "🗝️",
+        durationSec: 180, // 3 minutes
+        command: "/explore location:Chamber of Secrets",
+        channelId: "1566456169814560918"
+      },
+      {
+        id: "work",
+        name: "WORK",
+        icon: "📜",
+        durationSec: 1800, // 30 minutes
+        command: "/work",
+        channelId: "1566456138067738849"
+      },
+      {
+        id: "pet_treat",
+        name: "PET TREAT",
+        icon: "🦉",
+        durationSec: 7200, // 2 hours
+        command: "/pet-feed",
+        channelId: "1566456143851692143"
+      },
+      {
+        id: "career_work",
+        name: "CAREER WORK",
+        icon: "💼",
+        durationSec: 7200, // 2 hours
+        command: "/career work",
+        channelId: "1566456143851692143"
+      }
+    ];
+
+    // State management
+    let state = {
+      soundEnabled: true,
+      timers: {}
+    };
+
+    let activeModalTaskId = null;
+
+    // Load state from localStorage
+    function loadState() {
+      try {
+        const saved = localStorage.getItem("hogwarts_timer_state_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state.soundEnabled = parsed.soundEnabled ?? true;
+          state.timers = parsed.timers || {};
+        }
+      } catch (e) {
+        console.error("Failed to load local storage state", e);
+      }
+
+      // Initialize missing tasks
+      TASKS_DATA.forEach(task => {
+        if (!state.timers[task.id]) {
+          state.timers[task.id] = {
+            isRunning: false,
+            remainingSec: task.durationSec,
+            targetEndTime: null
+          };
+        } else {
+          // If was running, recalculate remaining
+          const t = state.timers[task.id];
+          if (t.isRunning && t.targetEndTime) {
+            const now = Date.now();
+            const leftMs = t.targetEndTime - now;
+            if (leftMs <= 0) {
+              // Expired while tab closed
+              t.isRunning = false;
+              t.remainingSec = task.durationSec; // Reset as per requirement!
+              t.targetEndTime = null;
+            } else {
+              t.remainingSec = Math.ceil(leftMs / 1000);
+            }
+          }
+        }
+      });
+      saveState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem("hogwarts_timer_state_v1", JSON.stringify(state));
+      } catch (e) {
+        console.warn("Storage error", e);
+      }
+    }
+
+    function formatDurationLabel(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      const parts = [];
+      if (h > 0) parts.push(`${h}h`);
+      if (m > 0) parts.push(`${m}m`);
+      if (s > 0) parts.push(`${s}s`);
+      return parts.join(" ") || "0s";
+    }
+
+    function formatTime(sec) {
+      if (sec < 0) sec = 0;
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+
+      if (h > 0) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function getDiscordUri(channelId) {
+      return `discord://discord.com/channels/${SERVER_ID}/${channelId}`;
+    }
+
+    // Render Cards with Harry Potter aesthetic
+    function renderCards() {
+      const listEl = document.getElementById("timerList");
+      listEl.innerHTML = "";
+
+      TASKS_DATA.forEach(task => {
+        const timer = state.timers[task.id];
+        const card = document.createElement("div");
+        card.id = `card-${task.id}`;
+        card.className = `timer-card ${timer.isRunning ? 'running' : ''}`;
+
+        const isReady = !timer.isRunning && timer.remainingSec === task.durationSec;
+        const percent = Math.max(0, Math.min(100, ((task.durationSec - timer.remainingSec) / task.durationSec) * 100));
+
+        card.innerHTML = `
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-${task.id}" style="width: ${timer.isRunning ? percent : (isReady ? 0 : percent)}%"></div>
+          </div>
+
+          <div class="task-meta">
+            <div class="task-icon-orb">${task.icon}</div>
+            <div class="task-info">
+              <div class="task-title-row">
+                <span class="task-name">${task.name}</span>
+                <span class="badge-duration">${formatDurationLabel(task.durationSec)}</span>
+                <span class="badge-status ${timer.isRunning ? 'running' : 'idle'}" id="status-badge-${task.id}">
+                  ${timer.isRunning ? 'Brewing' : 'Ready'}
+                </span>
+              </div>
+              <div class="command-preview" title="Incantation to copy">${task.command}</div>
+            </div>
+          </div>
+
+          <div class="task-actions">
+            <div class="timer-display" id="display-${task.id}">
+              ${formatTime(timer.remainingSec)}
+            </div>
+
+            <div class="action-group">
+              ${timer.isRunning ? `
+                <button class="btn btn-pause" onclick="pauseTimer('${task.id}')" title="Pause Time-Turner">⏸️</button>
+              ` : `
+                <button class="btn btn-start" onclick="startTimer('${task.id}')" title="Turn Time-Turner (Start)">▶️ Start</button>
+              `}
+              <button class="btn btn-reset" onclick="resetTimer('${task.id}')" title="Reset Cooldown">🔄</button>
+            </div>
+
+            <div class="action-group">
+              <button class="btn btn-quick" onclick="copyAndOpenDiscord('${task.id}')" title="1-Click: Copy incantation & fly to Discord. (You start the timer manually)">
+                <span>⚡</span> Copy & Open
+              </button>
+
+              <button class="btn btn-copy" id="btn-copy-${task.id}" onclick="copyCommand('${task.id}', '${task.command.replace(/'/g, "\\'")}')" title="Copy Incantation Only">
+                <span>📋</span>
+              </button>
+              
+              <a class="btn btn-discord" href="${getDiscordUri(task.channelId)}" title="Open in Discord Desktop Client">
+                <svg width="15" height="12" viewBox="0 0 127.14 96.36" fill="currentColor">
+                  <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        `;
+
+        listEl.appendChild(card);
+      });
+    }
+
+    // Timer controls
+    function startTimer(taskId) {
+      const task = TASKS_DATA.find(t => t.id === taskId);
+      const timer = state.timers[taskId];
+      if (!timer || !task) return;
+
+      if (timer.remainingSec <= 0) {
+        timer.remainingSec = task.durationSec;
+      }
+
+      timer.isRunning = true;
+      timer.targetEndTime = Date.now() + (timer.remainingSec * 1000);
+      saveState();
+      renderCards();
+      showToast(`✨ Time-Turner active: ${task.name}`);
+    }
+
+    function pauseTimer(taskId) {
+      const timer = state.timers[taskId];
+      if (!timer || !timer.isRunning) return;
+
+      if (timer.targetEndTime) {
+        const remainingMs = timer.targetEndTime - Date.now();
+        timer.remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+      }
+      timer.isRunning = false;
+      timer.targetEndTime = null;
+      saveState();
+      renderCards();
+    }
+
+    function resetTimer(taskId) {
+      const task = TASKS_DATA.find(t => t.id === taskId);
+      const timer = state.timers[taskId];
+      if (!timer || !task) return;
+
+      timer.isRunning = false;
+      timer.remainingSec = task.durationSec;
+      timer.targetEndTime = null;
+      saveState();
+      renderCards();
+      showToast(`🔄 Reset ${task.name} to ${formatDurationLabel(task.durationSec)}`);
+    }
+
+    // Clock tick
+    setInterval(() => {
+      const now = Date.now();
+      let stateChanged = false;
+
+      TASKS_DATA.forEach(task => {
+        const timer = state.timers[task.id];
+        if (!timer || !timer.isRunning) return;
+
+        const leftMs = timer.targetEndTime - now;
+        const leftSec = Math.max(0, Math.ceil(leftMs / 1000));
+
+        if (leftSec <= 0) {
+          timer.isRunning = false;
+          timer.targetEndTime = null;
+          
+          // RULE: Reset to initial duration, do NOT auto-start!
+          timer.remainingSec = task.durationSec;
+          stateChanged = true;
+
+          triggerFinishedAlert(task);
+          renderCards();
+        } else {
+          timer.remainingSec = leftSec;
+          
+          const displayEl = document.getElementById(`display-${task.id}`);
+          if (displayEl) displayEl.textContent = formatTime(leftSec);
+
+          const progressEl = document.getElementById(`progress-${task.id}`);
+          if (progressEl) {
+            const pct = Math.max(0, Math.min(100, ((task.durationSec - leftSec) / task.durationSec) * 100));
+            progressEl.style.width = pct + "%";
+          }
+        }
+      });
+
+      if (stateChanged) {
+        saveState();
+      }
+    }, 250);
+
+    // Alert Trigger
+    function triggerFinishedAlert(task) {
+      if (state.soundEnabled) {
+        playMagicalChime();
+      }
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          const notif = new Notification(`⚡ Owl Post: ${task.name} Ready!`, {
+            body: `Your cooldown has completed. Tap to copy incantation or open Discord.`,
+            icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>"
+          });
+          notif.onclick = () => {
+            window.focus();
+            openModal(task);
+          };
+        } catch (e) {
+          console.warn("OS Notification error", e);
+        }
+      }
+
+      openModal(task);
+    }
+
+    // Modal Popup Management
+    function openModal(task) {
+      activeModalTaskId = task.id;
+      document.getElementById("modalTitle").textContent = `${task.name}`;
+      document.getElementById("modalDesc").innerHTML = `The <strong>${formatDurationLabel(task.durationSec)}</strong> cooldown is complete.<br>The Time-Turner has <strong>reset</strong>. Prepare your wand!`;
+      document.getElementById("modalCommand").textContent = task.command;
+      
+      const discordLink = document.getElementById("modalBtnDiscord");
+      discordLink.href = getDiscordUri(task.channelId);
+
+      const copyBtn = document.getElementById("modalBtnCopy");
+      copyBtn.innerHTML = "<span>📋</span> Copy Only";
+      copyBtn.classList.remove("copied");
+
+      document.getElementById("alertModal").classList.add("active");
+    }
+
+    function closeModal() {
+      document.getElementById("alertModal").classList.remove("active");
+      activeModalTaskId = null;
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === "alertModal") {
+        closeModal();
+      }
+    }
+
+    function modalCopyAndOpenAction() {
+      if (!activeModalTaskId) return;
+      const taskId = activeModalTaskId;
+      closeModal();
+      copyAndOpenDiscord(taskId);
+    }
+
+    function modalCopyAction() {
+      if (!activeModalTaskId) return;
+      const task = TASKS_DATA.find(t => t.id === activeModalTaskId);
+      if (!task) return;
+
+      copyToClipboard(task.command);
+      const copyBtn = document.getElementById("modalBtnCopy");
+      copyBtn.innerHTML = "<span>✓</span> Copied!";
+      copyBtn.classList.add("copied");
+      showToast(`Incantation copied: "${task.command}"`);
+    }
+
+    function modalStartAgainAction() {
+      if (!activeModalTaskId) return;
+      const taskId = activeModalTaskId;
+      closeModal();
+      startTimer(taskId);
+    }
+
+    // 1-Click Streamlined Action: Copy command + Launch Discord Desktop Client
+    function copyAndOpenDiscord(taskId) {
+      const task = TASKS_DATA.find(t => t.id === taskId);
+      if (!task) return;
+
+      copyToClipboard(task.command);
+
+      const uri = getDiscordUri(task.channelId);
+      const tempLink = document.createElement("a");
+      tempLink.href = uri;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+
+      showToast(`⚡ Incantation copied & launching Discord! Press Ctrl+V then Enter.`);
+    }
+
+    function copyCommand(taskId, commandText) {
+      copyToClipboard(commandText);
+      
+      const btn = document.getElementById(`btn-copy-${taskId}`);
+      if (btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span>✓</span> Copied!`;
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.classList.remove("copied");
+        }, 1500);
+      }
+
+      showToast(`📋 Copied: ${commandText}`);
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    // Celestial Wand Chime Synthesizer (Magical Arpeggio)
+    function playMagicalChime() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+
+        // Hogwarts celestial harp / wand sparkle notes (G4, B4, D5, G5, B5, D6)
+        const notes = [392.00, 493.88, 587.33, 783.99, 987.77, 1174.66];
+        notes.forEach((freq, index) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + (index * 0.11));
+
+          gain.gain.setValueAtTime(0, ctx.currentTime + (index * 0.11));
+          gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + (index * 0.11) + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (index * 0.11) + 1.1);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(ctx.currentTime + (index * 0.11));
+          osc.stop(ctx.currentTime + (index * 0.11) + 1.15);
+        });
+      } catch (e) {
+        console.warn("Audio Context playback prevented", e);
+      }
+    }
+
+    function testAlertSound() {
+      playMagicalChime();
+      showToast("✨ Wand chime played!");
+    }
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      const btn = document.getElementById("btnSoundToggle");
+      const icon = document.getElementById("soundIcon");
+      const text = document.getElementById("soundText");
+
+      if (state.soundEnabled) {
+        btn.classList.add("active");
+        icon.textContent = "🔊";
+        text.textContent = "Chime: On";
+        showToast("Magical chimes unmuted");
+      } else {
+        btn.classList.remove("active");
+        icon.textContent = "🔇";
+        text.textContent = "Chime: Off";
+        showToast("Magical chimes muted - Silencio");
+      }
+      saveState();
+    }
+
+    function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        alert("This parchment browser does not support Owl Post notifications.");
+        return;
+      }
+
+      Notification.requestPermission().then(permission => {
+        updateNotificationButtonState();
+        if (permission === "granted") {
+          showToast("🦉 Owl Post notifications activated!");
+          new Notification("Hogwarts Academy", {
+            body: "Your Owl Post alerts will fly in when timers complete!",
+            icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>"
+          });
+        }
+      });
+    }
+
+    function updateNotificationButtonState() {
+      const btn = document.getElementById("btnNotifToggle");
+      const text = document.getElementById("notifStatusText");
+      if (!("Notification" in window)) {
+        btn.style.display = "none";
+        return;
+      }
+      if (Notification.permission === "granted") {
+        btn.classList.add("active");
+        text.textContent = "Owl Post Active";
+      } else {
+        btn.classList.remove("active");
+        text.textContent = "Owl Post Alerts";
+      }
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<span>✨</span> <span>${msg}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(10px)";
+        toast.style.transition = "all 0.3s ease";
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && activeModalTaskId) {
+        closeModal();
+      }
+    });
+
+    // Ambient Magical Starlight Particles (Pure HTML5 Canvas)
+    function initMagicalParticles() {
+      const canvas = document.getElementById("magicalCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
+
+      window.addEventListener("resize", () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const particleCount = 35;
+      const particles = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 1.8 + 0.6,
+          speedY: -(Math.random() * 0.45 + 0.15),
+          speedX: (Math.random() - 0.5) * 0.3,
+          alpha: Math.random() * 0.7 + 0.2,
+          pulse: Math.random() * 0.02 + 0.01,
+          color: Math.random() > 0.3 ? "249, 226, 149" : "212, 175, 55"
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        particles.forEach(p => {
+          p.y += p.speedY;
+          p.x += p.speedX;
+          p.alpha += Math.sin(Date.now() * p.pulse * 0.1) * 0.01;
+
+          if (p.y < -10) {
+            p.y = height + 10;
+            p.x = Math.random() * width;
+          }
+          if (p.x < -10) p.x = width + 10;
+          if (p.x > width + 10) p.x = -10;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.color}, ${Math.max(0.1, Math.min(0.9, p.alpha))})`;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = `rgba(${p.color}, 0.8)`;
+          ctx.fill();
+        });
+
+        requestAnimationFrame(draw);
+      }
+
+      draw();
+    }
+
+    // Initialize application
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      renderCards();
+      updateNotificationButtonState();
+      initMagicalParticles();
+
+      if (!state.soundEnabled) {
+        const btn = document.getElementById("btnSoundToggle");
+        const icon = document.getElementById("soundIcon");
+        const text = document.getElementById("soundText");
+        btn.classList.remove("active");
+        icon.textContent = "🔇";
+        text.textContent = "Chime: Off";
+      }
+    });
+  </script>
+</body>
+</html>
