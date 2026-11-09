@@ -1548,13 +1548,20 @@
         .then(r => r.text())
         .then(text => {
           if (!text) return;
+          const latestByTask = {};
           text.trim().split("\n").forEach(line => {
             try {
               const data = JSON.parse(line);
               if (data.event === "message" && data.message) {
-                applyRemoteFlooMessage(JSON.parse(data.message));
+                const msg = JSON.parse(data.message);
+                if (msg.taskId && (!latestByTask[msg.taskId] || (msg.timestamp || 0) > (latestByTask[msg.taskId].timestamp || 0))) {
+                  latestByTask[msg.taskId] = msg;
+                }
               }
             } catch(e) {}
+          });
+          Object.values(latestByTask).forEach(msg => {
+            applyRemoteFlooMessage(msg);
           });
         })
         .catch(err => console.warn("Floo catchup error", err));
@@ -1620,7 +1627,7 @@
 
       saveState();
       renderCards();
-      showToast(`🔥 Floo Sync: ${task.name} updated!`);
+      // Silently syncs state in background without spawning toast notifications
     }
 
     // Refresh sync state when returning to the tab
