@@ -14,8 +14,16 @@ A dedicated cooldown timer widget built specifically for the **Hogwarts Academy*
    - **PET TREAT:** `2 hours`
    - **CAREER WORK:** `2 hours`
    - **HARVEST MANDRAKE:** `2 hours`
+   - **BEAST TRAIN:** `4 hours`
+   - **BEAST FEED:** `6 hours`
 
-2. **Streamlined 1-Click "Copy & Open" Action:**
+2. **🔥 Floo Network Real-Time Cross-Device Sync:**
+   - Tap or click **🔥 Floo Sync** at the top of the page.
+   - Enter the **same secret passphrase** (e.g. `hogwarts-jerrad-83`) on both your PC and your iPhone.
+   - Starting, pausing, or resetting a timer on one device instantly updates the other in real time!
+   - Even when away or backgrounded, opening the page automatically catches up with the latest timer status.
+
+3. **Streamlined 1-Click "Copy & Open" Action:**
    - Each timer card and the completion popup include a **⚡ Copy & Open** button.
    - When clicked:
      1. Automatically copies the slash command (e.g. `/brew recipe:Healing Potion`) to your clipboard.

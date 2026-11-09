@@ -522,6 +522,9 @@
         <button id="btnSoundToggle" class="mobile-pill active" onclick="toggleSound()">
           <span id="soundIcon">🔊</span> <span id="soundText">Sound: On</span>
         </button>
+        <button id="btnFlooSync" class="mobile-pill" onclick="openSyncModal()" title="Cross-Device Real-Time Cloud Sync">
+          <span>🔥</span> <span id="flooSyncText">Floo Sync</span>
+        </button>
         <button id="btnWakeLock" class="mobile-pill" onclick="toggleWakeLock()">
           <span>🕯️</span> <span id="wakeLockText">Keep Screen On</span>
         </button>
@@ -565,6 +568,38 @@
         </button>
         
         <button class="mobile-pill" onclick="closeModal()" style="align-self: center; margin-top: 4px; padding: 6px 16px;">
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floo Network Real-Time Sync Modal -->
+  <div class="modal-backdrop" id="syncModal" onclick="handleSyncBackdropClick(event)">
+    <div class="modal-box" style="max-width: 380px;">
+      <div style="font-size: 36px; margin-bottom: 6px;">🔥</div>
+      <h2 class="modal-title" style="font-size: 19px;">Floo Network Sync</h2>
+      <div class="modal-sub">Cross-Device Synchronizer</div>
+      <p class="modal-desc" style="font-size: 14px; margin-bottom: 14px;">
+        Enter the <strong>exact same secret passphrase</strong> on both your PC and your iPhone. When you start, pause, or reset a timer on one device, it instantly updates on the other in real time!
+      </p>
+      
+      <div style="margin-bottom: 16px; text-align: left;">
+        <label style="display:block; font-family:var(--font-heading); font-size:10px; letter-spacing:1px; color:var(--gold-burnished); margin-bottom:6px; font-weight:700;">SECRET SYNC PASSPHRASE</label>
+        <input type="text" id="syncPassphraseInput" placeholder="e.g. hogwarts-jerrad-83" style="width:100%; background:rgba(10,8,6,0.85); border:1.5px solid var(--gold-burnished); padding:10px 12px; border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--gold-light); outline:none;">
+        <div id="syncStatusDesc" style="font-size: 12px; color: var(--parchment-muted); margin-top: 6px;">
+          ⚪ Status: Disconnected (Local Storage only)
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-m btn-m-start" onclick="saveAndConnectSync()" style="font-size: 14px; padding: 12px;">
+          <span>🔥</span> Connect to Floo Network
+        </button>
+        <button class="btn-m btn-m-reset" onclick="disconnectSync()" style="font-size: 12px; padding: 10px; border-radius: 8px;">
+          Disconnect (Use Local Only)
+        </button>
+        <button class="mobile-pill" onclick="closeSyncModal()" style="align-self: center; margin-top: 4px; padding: 6px 16px;">
           Dismiss
         </button>
       </div>
@@ -631,6 +666,22 @@
         icon: "🪴",
         durationSec: 7200,
         command: "/harvest",
+        channelId: "1566456143851692143"
+      },
+      {
+        id: "beast_train",
+        name: "BEAST TRAIN",
+        icon: "🎯",
+        durationSec: 14400,
+        command: "/beast train",
+        channelId: "1566456143851692143"
+      },
+      {
+        id: "beast_feed",
+        name: "BEAST FEED",
+        icon: "🥩",
+        durationSec: 21600,
+        command: "/beast feed",
         channelId: "1566456143851692143"
       }
     ];
@@ -799,6 +850,7 @@
       renderCards();
       triggerHaptic();
       showToast(`✨ Time-Turner active: ${task.name}`);
+      broadcastFlooUpdate("start", taskId);
     }
 
     function pauseTimer(taskId) {
@@ -814,6 +866,7 @@
       saveState();
       renderCards();
       triggerHaptic();
+      broadcastFlooUpdate("pause", taskId);
     }
 
     function resetTimer(taskId) {
@@ -828,6 +881,7 @@
       renderCards();
       triggerHaptic();
       showToast(`🔄 Reset ${task.name}`);
+      broadcastFlooUpdate("reset", taskId);
     }
 
     // 1-Click Action on Mobile
@@ -897,8 +951,195 @@
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         checkTimers();
+        if (syncCode) {
+          fetchLatestRemoteState();
+        }
       }
     });
+
+    // ==========================================
+    // FLOO NETWORK REAL-TIME CROSS-DEVICE SYNC
+    // ==========================================
+    let syncCode = localStorage.getItem("hogwarts_floo_code") || "";
+    let deviceId = localStorage.getItem("hogwarts_device_id") || "dev_" + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem("hogwarts_device_id", deviceId);
+    let flooSource = null;
+
+    function openSyncModal() {
+      const input = document.getElementById("syncPassphraseInput");
+      const statusDesc = document.getElementById("syncStatusDesc");
+      input.value = syncCode;
+      if (syncCode) {
+        statusDesc.innerHTML = `<span style="color:var(--green); font-weight:700;">🟢 Connected to Floo Network:</span> <strong style="color:var(--gold-light)">${syncCode}</strong>`;
+      } else {
+        statusDesc.innerHTML = `⚪ Status: Disconnected (Local Storage only)`;
+      }
+      document.getElementById("syncModal").classList.add("active");
+    }
+
+    function closeSyncModal() {
+      document.getElementById("syncModal").classList.remove("active");
+    }
+
+    function handleSyncBackdropClick(e) {
+      if (e.target.id === "syncModal") {
+        closeSyncModal();
+      }
+    }
+
+    function saveAndConnectSync() {
+      const input = document.getElementById("syncPassphraseInput");
+      const raw = input.value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+      if (!raw) {
+        alert("Please enter a secret passphrase (e.g. hogwarts-jerrad-83) to connect.");
+        return;
+      }
+      syncCode = raw;
+      localStorage.setItem("hogwarts_floo_code", syncCode);
+      closeSyncModal();
+      initFlooSync();
+      showToast(`🔥 Connected to Floo Network: ${syncCode}`);
+      broadcastCurrentTimers();
+    }
+
+    function disconnectSync() {
+      syncCode = "";
+      localStorage.removeItem("hogwarts_floo_code");
+      if (flooSource) {
+        flooSource.close();
+        flooSource = null;
+      }
+      updateSyncButtonUI();
+      closeSyncModal();
+      showToast("⚪ Disconnected from Floo Network (Local only)");
+    }
+
+    function updateSyncButtonUI() {
+      const btn = document.getElementById("btnFlooSync");
+      const text = document.getElementById("flooSyncText");
+      if (!btn || !text) return;
+
+      if (syncCode) {
+        btn.classList.add("active");
+        text.textContent = `Floo: ${syncCode}`;
+        btn.title = `Floo Network active (${syncCode}). Timers sync in real time across devices!`;
+      } else {
+        btn.classList.remove("active");
+        text.textContent = "Floo Sync";
+        btn.title = "Connect to Floo Network to sync with PC in real time";
+      }
+    }
+
+    function initFlooSync() {
+      updateSyncButtonUI();
+      if (!syncCode) return;
+
+      if (flooSource) {
+        flooSource.close();
+        flooSource = null;
+      }
+
+      // Initial catchup from cached messages
+      fetchLatestRemoteState();
+
+      // Open real-time SSE stream
+      try {
+        flooSource = new EventSource(`https://ntfy.sh/${encodeURIComponent(syncCode)}/sse`);
+        flooSource.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.event === "message" && data.message) {
+              applyRemoteFlooMessage(JSON.parse(data.message));
+            }
+          } catch(err) {
+            console.warn("Floo SSE parse error", err);
+          }
+        };
+      } catch(e) {
+        console.warn("Floo EventSource error", e);
+      }
+    }
+
+    function fetchLatestRemoteState() {
+      if (!syncCode) return;
+      fetch(`https://ntfy.sh/${encodeURIComponent(syncCode)}/json?poll=1`)
+        .then(r => r.text())
+        .then(text => {
+          if (!text) return;
+          text.trim().split("\n").forEach(line => {
+            try {
+              const data = JSON.parse(line);
+              if (data.event === "message" && data.message) {
+                applyRemoteFlooMessage(JSON.parse(data.message));
+              }
+            } catch(e) {}
+          });
+        })
+        .catch(err => console.warn("Floo catchup error", err));
+    }
+
+    function broadcastFlooUpdate(action, taskId) {
+      if (!syncCode) return;
+      const timer = state.timers[taskId];
+      if (!timer) return;
+
+      const payload = {
+        sender: deviceId,
+        timestamp: Date.now(),
+        action: action,
+        taskId: taskId,
+        timer: {
+          isRunning: timer.isRunning,
+          remainingSec: timer.remainingSec,
+          targetEndTime: timer.targetEndTime
+        }
+      };
+
+      fetch(`https://ntfy.sh/${encodeURIComponent(syncCode)}`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn("Floo broadcast error", e));
+    }
+
+    function broadcastCurrentTimers() {
+      if (!syncCode) return;
+      TASKS_DATA.forEach(task => {
+        const timer = state.timers[task.id];
+        if (timer && timer.isRunning) {
+          broadcastFlooUpdate("start", task.id);
+        }
+      });
+    }
+
+    function applyRemoteFlooMessage(msg) {
+      if (!msg || msg.sender === deviceId) return; // Ignore own messages
+      const task = TASKS_DATA.find(t => t.id === msg.taskId);
+      if (!task || !msg.timer) return;
+
+      const localTimer = state.timers[msg.taskId];
+      if (!localTimer) return;
+
+      localTimer.isRunning = msg.timer.isRunning;
+      localTimer.targetEndTime = msg.timer.targetEndTime;
+
+      if (localTimer.isRunning && localTimer.targetEndTime) {
+        const leftMs = localTimer.targetEndTime - Date.now();
+        const leftSec = Math.max(0, Math.ceil(leftMs / 1000));
+        if (leftSec <= 0) {
+          localTimer.isRunning = false;
+          localTimer.remainingSec = task.durationSec;
+          localTimer.targetEndTime = null;
+        } else {
+          localTimer.remainingSec = leftSec;
+        }
+      } else {
+        localTimer.remainingSec = msg.timer.remainingSec || task.durationSec;
+      }
+
+      saveState();
+      renderCards();
+      showToast(`🔥 Floo Sync: ${task.name} updated!`);
+    }
 
     function triggerFinishedAlert(task) {
       if (state.soundEnabled) {
@@ -1098,6 +1339,7 @@
     window.addEventListener("DOMContentLoaded", () => {
       loadState();
       renderCards();
+      initFlooSync();
     });
   </script>
 </body>
