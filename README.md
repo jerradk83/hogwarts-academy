@@ -16,6 +16,8 @@ A dedicated cooldown timer widget built specifically for the **Hogwarts Academy*
    - **HARVEST MANDRAKE:** `2 hours`
    - **BEAST TRAIN:** `4 hours`
    - **BEAST FEED:** `6 hours`
+   - **QUIDDITCH:** `5 minutes`
+   - **DIVINATION:** `4 hours`
 
 2. **🔥 Floo Network Real-Time Cross-Device Sync:**
    - Tap or click **🔥 Floo Sync** at the top of the page.
