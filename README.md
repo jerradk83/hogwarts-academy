@@ -26,6 +26,7 @@ A dedicated cooldown timer and event clock widget built specifically for the **H
    - **BEAST FEED:** `6 hours` (`/beast feed`)
    - **QUIDDITCH:** `5 minutes` (`/quidditch`)
    - **DIVINATION:** `4 hours` (`/divination`)
+   - **RIDDLE:** `4 minutes` (`/riddle`)
 
 3. **🔥 Floo Network Real-Time Cross-Device Sync:**
    - Tap or click **🔥 Floo Sync** at the top of the page.
