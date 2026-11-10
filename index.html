@@ -804,7 +804,7 @@
       <button class="btn-close-modal" onclick="closeModal()">✕</button>
       <div class="wax-seal">H</div>
       <h2 class="modal-title" id="modalTitle">Cooldown Ready!</h2>
-      <div class="modal-sub">By Order of Hogwarts Academy</div>
+      <div class="modal-sub" id="modalSub">By Order of Hogwarts Academy</div>
       <p class="modal-desc" id="modalDesc">Your cooldown has completed. The Time-Turner is <strong>reset</strong> and waiting for your command.</p>
       
       <div class="modal-command-box" id="modalCommand">/brew recipe:Healing Potion</div>
@@ -874,24 +874,10 @@
   <script>
     // Configuration for Hogwarts Academy Tasks
     const SERVER_ID = "1566057824159793233";
+    const CAPTURE_CHANNEL_ID = "1566456160368730213";
+    const CAPTURE_DISCORD_URI = `discord://discord.com/channels/${SERVER_ID}/${CAPTURE_CHANNEL_ID}`;
 
     const TASKS_DATA = [
-      {
-        id: "healing_potion",
-        name: "BREW HEALING POTION",
-        icon: "🧪",
-        durationSec: 90, // 1 min 30 sec
-        command: "/brew recipe:Healing Potion",
-        channelId: "1566456143851692143"
-      },
-      {
-        id: "focus_potion",
-        name: "BREW FOCUS POTION",
-        icon: "✨",
-        durationSec: 90, // 1 min 30 sec
-        command: "/brew recipe:Focus Potion",
-        channelId: "1566456143851692143"
-      },
       {
         id: "explore",
         name: "EXPLORE",
@@ -1050,11 +1036,194 @@
       return `discord://discord.com/channels/${SERVER_ID}/${channelId}`;
     }
 
+    // Central Standard Time (CST) Quarter-Hour Clock Logic
+    let lastCaptureAlertKey = null;
+
+    function getCSTInfo() {
+      const now = new Date();
+      const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour12: false,
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric'
+      });
+      const parts = dtf.formatToParts(now);
+      const p = {};
+      parts.forEach(x => p[x.type] = x.value);
+      const h = parseInt(p.hour, 10);
+      const m = parseInt(p.minute, 10);
+      const s = parseInt(p.second, 10);
+
+      const elapsedSec = (m % 15) * 60 + s;
+      const remainingSec = 900 - elapsedSec;
+
+      const targetDate = new Date(now.getTime() + (remainingSec * 1000));
+      const targetDtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      });
+      const targetStr = targetDtf.format(targetDate);
+
+      const strikeDtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      });
+      const strikeStr = strikeDtf.format(now);
+
+      const currentDtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+      });
+      const currentStr = currentDtf.format(now);
+
+      const quarterKey = `${p.year}-${p.month}-${p.day}-${h}-${Math.floor(m / 15)}`;
+
+      return { h, m, s, elapsedSec, remainingSec, targetStr, strikeStr, currentStr, quarterKey };
+    }
+
+    function updateCaptureClock() {
+      const info = getCSTInfo();
+      
+      const displayEl = document.getElementById("display-capture-time");
+      if (displayEl) {
+        displayEl.textContent = formatTime(info.remainingSec);
+      }
+
+      const progressEl = document.getElementById("progress-capture-time");
+      if (progressEl) {
+        const pct = Math.max(0, Math.min(100, (info.elapsedSec / 900) * 100));
+        progressEl.style.width = pct + "%";
+      }
+
+      const previewEl = document.getElementById("capture-cst-preview");
+      if (previewEl) {
+        previewEl.innerHTML = `Next: <strong>${info.targetStr} CST</strong> &nbsp;•&nbsp; Central Time (Chicago)`;
+      }
+
+      const clockSubEl = document.getElementById("cst-clock-sub");
+      if (clockSubEl) {
+        clockSubEl.textContent = `${info.currentStr} CST`;
+      }
+
+      // Quarter-hour strike trigger (:00, :15, :30, :45)
+      if (lastCaptureAlertKey === null) {
+        lastCaptureAlertKey = (info.m % 15 === 0 && info.s <= 3) ? "" : info.quarterKey;
+      }
+
+      if (info.m % 15 === 0 && info.s <= 10 && lastCaptureAlertKey !== info.quarterKey) {
+        lastCaptureAlertKey = info.quarterKey;
+        triggerCaptureAlert(info.strikeStr);
+      }
+    }
+
+    function triggerCaptureAlert(strikeStr) {
+      if (state.soundEnabled) {
+        playMagicalChime();
+      }
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          const notif = new Notification(`⚡ Owl Post: CAPTURE TIME! (${strikeStr} CST)`, {
+            body: `Quarter-hour capture time is here (${strikeStr} CST). Tap to open Discord!`,
+            icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏰</text></svg>"
+          });
+          notif.onclick = () => {
+            window.focus();
+            openCaptureModal(strikeStr);
+          };
+        } catch (e) {
+          console.warn("OS Notification error", e);
+        }
+      }
+
+      openCaptureModal(strikeStr);
+    }
+
+    function openCaptureModal(strikeStr) {
+      activeModalTaskId = "capture_time";
+      document.getElementById("modalTitle").textContent = "⚡ CAPTURE TIME!";
+      const sub = document.getElementById("modalSub");
+      if (sub) sub.textContent = "Central Standard Time (CST) • Chicago";
+      document.getElementById("modalDesc").innerHTML = `The clock has struck <strong>${strikeStr} CST</strong>.<br>It is quarter-hour Capture Time at Hogwarts Academy!`;
+      document.getElementById("modalCommand").textContent = "Channel: #capture • Server: Hogwarts Academy";
+      
+      const btnQuick = document.getElementById("modalBtnQuick");
+      if (btnQuick) {
+        btnQuick.style.display = "flex";
+        btnQuick.innerHTML = "<span>⚡</span> Open Capture in Discord";
+      }
+
+      const btnCopy = document.getElementById("modalBtnCopy");
+      if (btnCopy) btnCopy.style.display = "none";
+
+      const discordLink = document.getElementById("modalBtnDiscord");
+      if (discordLink) {
+        discordLink.href = CAPTURE_DISCORD_URI;
+        discordLink.style.display = "flex";
+      }
+
+      const btnRestart = document.getElementById("modalBtnRestart");
+      if (btnRestart) btnRestart.style.display = "none";
+
+      document.getElementById("alertModal").classList.add("active");
+    }
+
     // Render Cards with Harry Potter aesthetic
     function renderCards() {
       const listEl = document.getElementById("timerList");
       listEl.innerHTML = "";
 
+      // 1. CAPTURE TIME CST QUARTER-HOUR CLOCK (Placed directly above Explore)
+      const captureCard = document.createElement("div");
+      captureCard.id = "card-capture-time";
+      captureCard.className = "timer-card running";
+      captureCard.style.borderColor = "rgba(212, 175, 55, 0.6)";
+      captureCard.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(212, 175, 55, 0.08)";
+
+      captureCard.innerHTML = `
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-capture-time" style="background: linear-gradient(90deg, #b8860b, #d4af37, #f7d070);"></div>
+        </div>
+
+        <div class="task-meta">
+          <div class="task-icon-orb" style="border-color: #f7d070; box-shadow: 0 0 12px rgba(212, 175, 55, 0.4); font-size: 20px;">⏰</div>
+          <div class="task-info">
+            <div class="task-title-row">
+              <span class="task-name" style="color: #f7d070; letter-spacing: 2px;">CAPTURE TIME</span>
+              <span class="badge-duration" style="border-color: #d4af37; color: #f7d070; background: rgba(212, 175, 55, 0.1);">15M CST</span>
+              <span class="badge-status running" id="status-badge-capture-time" style="background: rgba(212, 175, 55, 0.15); border-color: #d4af37; color: #f7d070;">
+                🕒 CST Clock
+              </span>
+            </div>
+            <div class="command-preview" id="capture-cst-preview" title="Central Standard Time (Chicago)">Next: --:-- -- CST &nbsp;•&nbsp; Chicago Time</div>
+          </div>
+        </div>
+
+        <div class="task-actions">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; min-width: 120px;">
+            <div class="timer-display" id="display-capture-time" style="color: #f7d070; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);">
+              --:--
+            </div>
+            <div id="cst-clock-sub" style="font-family: var(--font-mono); font-size: 11px; color: var(--parchment-muted); margin-top: 2px;">
+              --:--:-- CST
+            </div>
+          </div>
+
+          <div class="action-group">
+            <a class="btn btn-quick" href="${CAPTURE_DISCORD_URI}" style="text-decoration: none; padding: 9px 18px; font-weight: 600;" title="Open Capture Channel in Discord Desktop App">
+              <span>⚡</span> Open Capture
+            </a>
+            <a class="btn btn-discord" href="${CAPTURE_DISCORD_URI}" title="Open Discord Channel">
+              <svg width="15" height="12" viewBox="0 0 127.14 96.36" fill="currentColor">
+                <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(captureCard);
+
+      // 2. STANDARD TASKS
       TASKS_DATA.forEach(task => {
         const timer = state.timers[task.id];
         const card = document.createElement("div");
@@ -1117,6 +1286,8 @@
 
         listEl.appendChild(card);
       });
+
+      updateCaptureClock();
     }
 
     // Timer controls
@@ -1170,6 +1341,9 @@
     setInterval(() => {
       const now = Date.now();
       let stateChanged = false;
+
+      // Always update real-time CST quarter-hour clock
+      updateCaptureClock();
 
       TASKS_DATA.forEach(task => {
         const timer = state.timers[task.id];
@@ -1235,15 +1409,32 @@
     function openModal(task) {
       activeModalTaskId = task.id;
       document.getElementById("modalTitle").textContent = `${task.name}`;
+      const sub = document.getElementById("modalSub");
+      if (sub) sub.textContent = "By Order of Hogwarts Academy";
       document.getElementById("modalDesc").innerHTML = `The <strong>${formatDurationLabel(task.durationSec)}</strong> cooldown is complete.<br>The Time-Turner has <strong>reset</strong>. Prepare your wand!`;
       document.getElementById("modalCommand").textContent = task.command;
       
       const discordLink = document.getElementById("modalBtnDiscord");
-      discordLink.href = getDiscordUri(task.channelId);
+      if (discordLink) {
+        discordLink.href = getDiscordUri(task.channelId);
+        discordLink.style.display = "flex";
+      }
 
-      const copyBtn = document.getElementById("modalBtnCopy");
-      copyBtn.innerHTML = "<span>📋</span> Copy Only";
-      copyBtn.classList.remove("copied");
+      const btnQuick = document.getElementById("modalBtnQuick");
+      if (btnQuick) {
+        btnQuick.style.display = "flex";
+        btnQuick.innerHTML = "<span>⚡</span> Copy Incantation & Open Discord";
+      }
+
+      const btnCopy = document.getElementById("modalBtnCopy");
+      if (btnCopy) {
+        btnCopy.style.display = "flex";
+        btnCopy.innerHTML = "<span>📋</span> Copy Only";
+        btnCopy.classList.remove("copied");
+      }
+
+      const btnRestart = document.getElementById("modalBtnRestart");
+      if (btnRestart) btnRestart.style.display = "flex";
 
       document.getElementById("alertModal").classList.add("active");
     }
@@ -1251,6 +1442,19 @@
     function closeModal() {
       document.getElementById("alertModal").classList.remove("active");
       activeModalTaskId = null;
+      const sub = document.getElementById("modalSub");
+      if (sub) sub.textContent = "By Order of Hogwarts Academy";
+      const btnQuick = document.getElementById("modalBtnQuick");
+      if (btnQuick) {
+        btnQuick.style.display = "flex";
+        btnQuick.innerHTML = "<span>⚡</span> Copy Incantation & Open Discord";
+      }
+      const btnCopy = document.getElementById("modalBtnCopy");
+      if (btnCopy) btnCopy.style.display = "flex";
+      const btnRestart = document.getElementById("modalBtnRestart");
+      if (btnRestart) btnRestart.style.display = "flex";
+      const discordLink = document.getElementById("modalBtnDiscord");
+      if (discordLink) discordLink.style.display = "flex";
     }
 
     function handleBackdropClick(e) {
@@ -1261,13 +1465,23 @@
 
     function modalCopyAndOpenAction() {
       if (!activeModalTaskId) return;
+      if (activeModalTaskId === "capture_time") {
+        closeModal();
+        const tempLink = document.createElement("a");
+        tempLink.href = CAPTURE_DISCORD_URI;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+        showToast("⚡ Opening Capture Channel in Discord...");
+        return;
+      }
       const taskId = activeModalTaskId;
       closeModal();
       copyAndOpenDiscord(taskId);
     }
 
     function modalCopyAction() {
-      if (!activeModalTaskId) return;
+      if (!activeModalTaskId || activeModalTaskId === "capture_time") return;
       const task = TASKS_DATA.find(t => t.id === activeModalTaskId);
       if (!task) return;
 
@@ -1279,7 +1493,7 @@
     }
 
     function modalStartAgainAction() {
-      if (!activeModalTaskId) return;
+      if (!activeModalTaskId || activeModalTaskId === "capture_time") return;
       const taskId = activeModalTaskId;
       closeModal();
       startTimer(taskId);
